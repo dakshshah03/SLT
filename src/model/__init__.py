@@ -1,0 +1,1 @@
+from video_mae import get_videoMAE_ssv2
