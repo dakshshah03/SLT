@@ -12,7 +12,7 @@ def sample_frames(video_path, num_frames=16):
     # TODO: Look into other preprocessing sampling strategies, in case those work better
     video_reader = decord.VideoReader(video_path)
     total_frames = len(video_reader)
-    frame_indices = np.random.randint(1, total_frames, size=num_frames)
+    frame_indices = np.sort(np.random.randint(0, total_frames-1, size=num_frames))
     video_frames = video_reader.get_batch(frame_indices)
     
     return video_frames

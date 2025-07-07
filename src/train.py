@@ -1,12 +1,10 @@
 import torch
 from transformers import TrainingArguments, Trainer, VideoMAEFeatureExtractor
 
-from model import get_videoMAE_ssv2
+from model import get_videoMAE_ssv2, get_videoMAE_adamW, unfreeze_layers
 from utils import asl_citizen_dataset
 
 import mlflow
-from mlflow.models import infer_signature
-
 
 
 training_args = TrainingArguments(
@@ -21,3 +19,15 @@ training_args = TrainingArguments(
     report_to="mlflow",
     run_name="videomae-asl-run",
 )
+
+
+
+
+trainer_classifier = Trainer(
+    model=get_videoMAE_ssv2,
+    args=training_args,
+    
+)
+
+# if __name__=="__main__":
+    
