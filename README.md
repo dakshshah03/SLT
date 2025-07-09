@@ -7,6 +7,10 @@ require:
 decord
 transformers
 torch
+pytorchvideo
+pandas
+mlflow
+numpy
 
 
 Running:
