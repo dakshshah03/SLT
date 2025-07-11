@@ -1,0 +1,46 @@
+apiVersion: "kubeflow.org/v1"
+kind: PyTorchJob
+metadata:
+  name: slt-train-job
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: pytorch/pytorch:2.3.0-cuda11.8-cudnn8-runtime
+              command: ["python", "/app/train.py"]
+              args: ["--epochs", "30"]
+              volumeMounts:
+                - name: dataset
+                  mountPath: /root/dataset
+              env:
+                - name: CUDA_VISIBLE_DEVICES
+                  value: "0,1"
+              resources:
+                requests:
+                  memory: "32Gi"
+                  cpu: "6"
+                  nvidia.com/gpu: "2"
+                  ephemeral-storage: 35Gi
+                limits:
+                  memory: "32Gi"
+                  cpu: "6"
+                  nvidia.com/gpu: "2"
+                  ephemeral-storage: 35Gi
+          volumes:
+            - name: dataset
+              persistentVolumeClaim:
+                claimName: asl-data
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                    - NVIDIA-L40
