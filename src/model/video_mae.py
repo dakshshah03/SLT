@@ -1,9 +1,11 @@
-from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
+from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor, TrainerCallback
 import torch.nn as nn
 from torch.optim import AdamW
 
 # model = VideoMAEForVideoClassification.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2")
 # print(model)
+
+# TODO: Clean up model, turn it into a pytorch class
 
 def get_videoMAE_ssv2(num_classes):
     model = VideoMAEForVideoClassification.from_pretrained(
@@ -19,7 +21,7 @@ def get_videoMAE_ssv2(num_classes):
         nn.Linear(hidden_size, hidden_size // 2),
         nn.ReLU(),
         nn.Dropout(0.3),
-        nn.Linear(hidden_size // 2, 2700)
+        nn.Linear(hidden_size // 2, num_classes)
     )
     
     return model
@@ -32,17 +34,4 @@ def get_videoMAE_adamW(model):
     ]
     return AdamW(optimizer_parameters, weight_decay=0.01)
 
-
-def unfreeze_layers(model, unfreeze_layer_count=2):
-    num_encoder_layers = len(model.videomae.encoder.layer)
-    
-    # unfreezes the last layers specified by unfreeze_layer_count
-    for i in range(num_encoder_layers):
-        if i > num_encoder_layers - unfreeze_layer_count:
-            for param in model.videomae.encoder.layer[i].parameters():
-                param.requires_grad = False
-        else:
-            for param in model.videomae.encoder.layer[i].parameters():
-                param.requires_grad = True
-    
-print(VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"))
+# print(VideoMAEForVideoClassification.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"))
