@@ -1,10 +1,11 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import decord
 import pandas as pd
 import os
 import numpy as np
-import torchvision.transforms.v2 as transforms
+from transforms import VideoMAE_Transform
+from transformers import VideoMAEImageProcessor
 # TODO: Transforms
 
 def sample_frames(video_path, num_frames=16):
@@ -12,13 +13,13 @@ def sample_frames(video_path, num_frames=16):
     # TODO: Look into other preprocessing sampling strategies, in case those work better
     video_reader = decord.VideoReader(video_path)
     total_frames = len(video_reader)
-    frame_indices = np.random.randint(1, total_frames, size=num_frames)
-    video_frames = video_reader.get_batch(frame_indices)
-    
+    frame_indices = np.sort(np.random.randint(0, total_frames-1, size=num_frames))
+    video_frames = video_reader.get_batch(frame_indices).asnumpy().transpose(0, 3, 1, 2)
+    video_frames = torch.from_numpy(video_frames.astype(np.float32) / 255.0)
     return video_frames
 
 class asl_citizen_dataset(Dataset):
-    def __init__(self, csv_path, video_dir, transform=None, num_labels=None):
+    def __init__(self, csv_path, video_dir, train, model="MCG-NJU/videomae-base-finetuned-ssv2", transform=None, num_labels=None):
         """
         Takes in ASL citizen formatted CSV file and loads dataset
         Args:
@@ -36,7 +37,7 @@ class asl_citizen_dataset(Dataset):
         # allows training on a subset of training classes (for testing)
         if num_labels:
             self.lex_codes = np.sort(self.csv_df['ASL-LEX Code'].unique())[:num_labels]
-            self.csv_df = csv_df.loc[csv_df['ASL-LEX Code'] in self.lex_codes]
+            self.csv_df = csv_df.loc[csv_df['ASL-LEX Code'].isin(self.lex_codes)]
         else:
             self.lex_codes = np.sort(self.csv_df['ASL-LEX Code'].unique())
         
@@ -63,5 +64,10 @@ class asl_citizen_dataset(Dataset):
         return sample, label
 
 # testing 
-# if __name__ == "__main__":
-    
+if __name__ == "__main__":
+    vid = sample_frames("test_video.mp4")
+    processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2")
+    transform = VideoMAE_Transform(processor, train=True)
+    print(type(vid))
+    x = transform(vid)
+    print(x.shape)
