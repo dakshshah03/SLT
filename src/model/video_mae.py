@@ -1,37 +1,52 @@
-from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor, TrainerCallback
+from transformers import VideoMAEForVideoClassification
 import torch.nn as nn
 from torch.optim import AdamW
+import torch.nn.functional as F 
 
-# model = VideoMAEForVideoClassification.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2")
-# print(model)
+class VideoMAE_ssv2_Finetune(nn.Module):
+    """
+    VideoMAE model architecture with a 2 layer classifier
+    head to support classification for 2700+ gesture classes.
+    For use in ASL Gesture recognition.
 
-# TODO: Clean up model, turn it into a pytorch class
-
-def get_videoMAE_ssv2(num_classes):
-    model = VideoMAEForVideoClassification.from_pretrained(
-        "MCG-NJU/videomae-base-finetuned-ssv2"
-    )
-    # freeze backbone
-    for param in model.videomae.parameters():
-        param.requires_grad = False
+    Args:
+        num_classes (int): Number of classes for output layer
+    """
+    def __init__(self, num_classes=100):
+        super(VideoMAE_ssv2_Finetune, self).__init__()
+        
+        model = VideoMAEForVideoClassification.from_pretrained(
+            "MCG-NJU/videomae-base-finetuned-ssv2"
+        )
+        hidden_size = model.config.hidden_size
+        
+        self.videomae = model.videomae
+        self.fc_norm = model.fc_norm
+        
+        self.output_size = num_classes
+        
+        for param in self.videomae.parameters():
+            param.requires_grad = False
+        for param in self.fc_norm.parameters():
+            param.requires_grad = False
+            
+        self.classifier =  nn.Sequential(
+            nn.Linear(hidden_size, hidden_size // 2),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_size // 2, num_classes)
+        )
     
-    # add custom classifier head (2 layers)
-    hidden_size = model.config.hidden_size
-    model.classifier = nn.Sequential(
-        nn.Linear(hidden_size, hidden_size // 2),
-        nn.ReLU(),
-        nn.Dropout(0.3),
-        nn.Linear(hidden_size // 2, num_classes)
-    )
+    def forward(self, pixel_values, labels=None):
+        x = self.videomae(pixel_values)
+        x = self.fc_norm(x)
+        logits = self.classifier(x)
+        
+        if labels is not None:
+            loss = F.cross_entropy(logits, labels)
+
+        return {"loss": loss, "logits": logits}
     
-    return model
-
-# splitting training into 2-3 parts, with gradual layer unfreezing
-def get_videoMAE_adamW(model):
-    optimizer_parameters = [
-        {'params': model.classifier.parameters(), 'lr': 1e-4},
-        {'params': [p for p in model.videomae.parameters() if p.requires_grad], 'lr': 1e-5}
-    ]
-    return AdamW(optimizer_parameters, weight_decay=0.01)
-
-# print(VideoMAEForVideoClassification.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"))
+if __name__ == "__main__":
+    x = VideoMAE_ssv2_Finetune()
+    print(x)
