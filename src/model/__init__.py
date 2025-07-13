@@ -1,2 +1,2 @@
-from video_mae import get_videoMAE_ssv2, get_videoMAE_adamW, unfreeze_layers
+from video_mae import VideoMAE_ssv2_Finetune
 from callbacks import LayerUnfreeze
