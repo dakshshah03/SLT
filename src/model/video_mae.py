@@ -1,6 +1,7 @@
 from transformers import VideoMAEForVideoClassification
 import torch.nn as nn
 from torch.optim import AdamW
+import torch.nn.functional as F 
 
 class VideoMAE_ssv2_Finetune(nn.Module):
     """
@@ -36,13 +37,16 @@ class VideoMAE_ssv2_Finetune(nn.Module):
             nn.Linear(hidden_size // 2, num_classes)
         )
     
-    def forward(self, logits):
-        logits = self.videomae(logits)
-        logits = self.fc_norm(logits)
-        logits = self.classifier(logits)
+    def forward(self, pixel_values, labels=None):
+        x = self.videomae(pixel_values)
+        x = self.fc_norm(x)
+        logits = self.classifier(x)
         
-        return logits
+        if labels is not None:
+            loss = F.cross_entropy(logits, labels)
 
+        return {"loss": loss, "logits": logits}
+    
 if __name__ == "__main__":
     x = VideoMAE_ssv2_Finetune()
     print(x)
