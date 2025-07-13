@@ -2,6 +2,9 @@ import torchvision.transforms.v2 as T
 from transformers import VideoMAEImageProcessor
 import torch
 
+# TODO: Transforms
+# TODO: Clean up code
+
 class VideoMAE_Transform:
     def __init__(self, image_processor, train=True):
         self.mean = image_processor.image_mean

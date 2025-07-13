@@ -6,20 +6,10 @@ import os
 import numpy as np
 from transforms import VideoMAE_Transform
 from transformers import VideoMAEImageProcessor
-# TODO: Transforms
 
-def sample_frames(video_path, num_frames=16):
-    # samples 16 random frames from the video. Chose to do this because other approaches would take longer
-    # TODO: Look into other preprocessing sampling strategies, in case those work better
-    video_reader = decord.VideoReader(video_path)
-    total_frames = len(video_reader)
-    frame_indices = np.sort(np.random.randint(0, total_frames-1, size=num_frames))
-    video_frames = video_reader.get_batch(frame_indices).asnumpy().transpose(0, 3, 1, 2)
-    video_frames = torch.from_numpy(video_frames.astype(np.float32) / 255.0)
-    return video_frames
-
+# TODO: Clean up code
 class asl_citizen_dataset(Dataset):
-    def __init__(self, csv_path, video_dir, train, model="MCG-NJU/videomae-base-finetuned-ssv2", transform=None, num_labels=None):
+    def __init__(self, csv_path, video_dir, model="MCG-NJU/videomae-base-finetuned-ssv2", transform=None, num_labels=None):
         """
         Takes in ASL citizen formatted CSV file and loads dataset
         Args:
@@ -53,7 +43,7 @@ class asl_citizen_dataset(Dataset):
         lex_code = row['ASL-LEX Code']
         
         video_path = os.path.join(self.video_dir, video_filename)
-        video_frames = sample_frames(video_path, num_frames=16)
+        video_frames = self.sample_frames(video_path, num_frames=16)
         sample = torch.from_numpy(video_frames).float()
         
         label = self.lex_code_to_label[lex_code]
@@ -62,10 +52,19 @@ class asl_citizen_dataset(Dataset):
             sample = self.transform(sample)
             
         return sample, label
+    
+    def sample_frames(video_path, num_frames=16):
+        video_reader = decord.VideoReader(video_path)
+        total_frames = len(video_reader)
+        frame_indices = np.sort(np.random.randint(0, total_frames-1, size=num_frames))
+        video_frames = video_reader.get_batch(frame_indices).asnumpy().transpose(0, 3, 1, 2)
+        video_frames = torch.from_numpy(video_frames.astype(np.float32) / 255.0)
+        
+        return video_frames
 
 # testing 
 if __name__ == "__main__":
-    vid = sample_frames("test_video.mp4")
+    vid = asl_citizen_dataset.sample_frames("test_video.mp4")
     processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2")
     transform = VideoMAE_Transform(processor, train=True)
     print(type(vid))
