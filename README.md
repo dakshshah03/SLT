@@ -1,7 +1,7 @@
-# SLT
+# VideoMAE based SLT
 disclaimer: this readme is in progress, so it will be messy until I start cleaning up the code for actual use.
 
-an open source, deployable ASL SLT model and framework.
+a deployable ASL SLT model and framework.
 
 require:
 decord
