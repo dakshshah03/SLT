@@ -15,7 +15,7 @@ class LayerUnfreezeLightning(BaseFinetuning):
         delay_unfreeze_all (int):       Epoch number to unfreeze all layers.
         num_encoder_layers (int):       Number of encoder layers in the model.
     """
-    def __init__(self, delay_start: int, epoch_step: int, delay_unfreeze_all: int, num_encoder_layers):
+    def __init__(self, delay_start: int, epoch_step: int, delay_unfreeze_all: int, num_encoder_layers: int):
         super().__init__()
         self._delay_start = delay_start
         self._time_to_unfreeze = delay_start

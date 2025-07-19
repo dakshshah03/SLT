@@ -3,7 +3,7 @@ from torch.optim import AdamW
 from transformers import TrainingArguments, Trainer
 from transformers import VideoMAEImageProcessor
 
-from model import VideoMAE_ssv2_FinetuneLightning, LayerUnfreeze
+from model import VideoMAE_ssv2_FinetuneLightning, LayerUnfreezeLightning
 from utils import asl_citizen_dataset, VideoMAE_Transform
 
 import os
@@ -13,8 +13,24 @@ from lightning.loggers import MLFlowLogger
 
 import argparse
 
-def train(args, model, train_set, test_set, optimizer):
-    train_loader = 
+def train(args, model, train_set, val_set, logger, callbacks):
+
+    train_loader = L.DataLoader(train_set, batch_size=args.train_batch_size, shuffle=True)
+    val_loader = L.DataLoader(val_set, batch_size=args.eval_batch_size, shuffle=False)
+        
+    trainer = L.Trainer(
+        strategy="ddp",
+        devices="auto",
+        max_epochs=args.max_epochs,
+        precision="16-mixed",
+        logger=logger,
+        callbacks=callbacks,
+        enable_checkpointing=True,
+        default_root_dir=args.output_dir
+    )
+    
+    trainer.fit(model, train_loader, val_loader)
+    
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
@@ -59,8 +75,8 @@ if __name__=="__main__":
         num_labels=args.num_classes
     )
 
-    test_set = asl_citizen_dataset(
-        csv_path=os.path.join(args.data_dir, "splits/test.csv"),
+    val_set = asl_citizen_dataset(
+        csv_path=os.path.join(args.data_dir, "splits/val.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
             VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"),
@@ -68,12 +84,20 @@ if __name__=="__main__":
         ),
         num_labels=args.num_classes
     )
+    
+    unfreeze_callback = LayerUnfreezeLightning(
+        delay_start=5,  # start unfreezing after 5 epochs
+        epoch_step=3,   # unfreeze 1 layer every 2 epochs
+        delay_unfreeze_all=15  # unfreeze all layers after 15 epochs
+    )
 
-    # trainer_classifier = Trainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=train_set,
-    #     eval_dataset=test_set,
-    #     optimizers=(optimizer, None),   
-    # )
-    # TODO: MLFlow Logging
+    lr_monitor = L.pytorch.callbacks.LearningRateMonitor(logging_interval="epoch")
+
+    callbacks = [unfreeze_callback, lr_monitor]
+
+    logger = MLFlowLogger(
+        experiment_name="videomae-asl-experiment"
+    )
+
+    
+    train(args, model, train_set, val_set, logger, callbacks=callbacks)
