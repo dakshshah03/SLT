@@ -17,6 +17,7 @@ My goal is to progressively increase the complexity of tasks, using different ap
 require:
 decord
 transformers
+torch lightning
 torch
 pandas
 mlflow

@@ -3,13 +3,13 @@ from torch.optim import AdamW
 from transformers import TrainingArguments, Trainer
 from transformers import VideoMAEImageProcessor
 
-from model import VideoMAE_ssv2_Finetune_Lightning, LayerUnfreeze
+from model import VideoMAE_ssv2_FinetuneLightning, LayerUnfreeze
 from utils import asl_citizen_dataset, VideoMAE_Transform
 
 import os
 
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import MLFlowLogger
+import lightning as L
+from lightning.loggers import MLFlowLogger
 
 import argparse
 
@@ -47,9 +47,8 @@ if __name__=="__main__":
         run_name="videomae-asl-run",
     )
 
-    model = VideoMAE_ssv2_Finetune_Lightning(num_classes=args.num_classes)
+    model = VideoMAE_ssv2_FinetuneLightning(num_classes=args.num_classes)
 
-    
     train_set = asl_citizen_dataset(
         csv_path=os.path.join(args.data_dir, "splits/train.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),

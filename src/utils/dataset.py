@@ -17,6 +17,7 @@ class asl_citizen_dataset(Dataset):
             video_dir (string): path to video directory
             transform (callable, optional): transforms for each set of images. Defaults to None.
         """
+        super(asl_citizen_dataset, self).__init__()
         csv_df = pd.read_csv(csv_path)
         self.csv_df = csv_df.drop(columns=['Gloss', 'Participant ID'])
         self.video_dir = video_dir
