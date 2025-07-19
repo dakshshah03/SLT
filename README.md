@@ -15,15 +15,11 @@ My goal is to progressively increase the complexity of tasks, using different ap
 3. Adapt skeleton/landmark approaches and h
 
 require:
-decord
-transformers
+
 torch lightning
-torch
-pandas
-mlflow
-numpy
 
 
 Running:
 1. Add relevant information to secrets.conf (template provided)
 - https://docs.databricks.com/aws/en/mlflow3/genai/getting-started/connect-environment
+2. Set up
