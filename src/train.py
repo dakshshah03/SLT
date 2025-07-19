@@ -3,15 +3,34 @@ from torch.optim import AdamW
 from transformers import TrainingArguments, Trainer
 from transformers import VideoMAEImageProcessor
 
-from model import VideoMAE_ssv2_Finetune, LayerUnfreeze
+from model import VideoMAE_ssv2_FinetuneLightning, LayerUnfreezeLightning
 from utils import asl_citizen_dataset, VideoMAE_Transform
 
 import os
 
-import mlflow
+import lightning as L
+from lightning.loggers import MLFlowLogger
 
 import argparse
 
+def train(args, model, train_set, val_set, logger, callbacks):
+
+    train_loader = L.DataLoader(train_set, batch_size=args.train_batch_size, shuffle=True)
+    val_loader = L.DataLoader(val_set, batch_size=args.eval_batch_size, shuffle=False)
+        
+    trainer = L.Trainer(
+        strategy="ddp",
+        devices="auto",
+        max_epochs=args.max_epochs,
+        precision="16-mixed",
+        logger=logger,
+        callbacks=callbacks,
+        enable_checkpointing=True,
+        default_root_dir=args.output_dir
+    )
+    
+    trainer.fit(model, train_loader, val_loader)
+    
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
@@ -44,18 +63,9 @@ if __name__=="__main__":
         run_name="videomae-asl-run",
     )
 
-    model = VideoMAE_ssv2_Finetune(num_classes=args.num_classes)
+    model = VideoMAE_ssv2_FinetuneLightning(num_classes=args.num_classes)
 
-    optimizer_parameters = [
-        {'params': model.classifier.parameters(), 'lr': 1e-4},
-        {'params': [p for p in model.videomae.parameters() if p.requires_grad], 'lr': 1e-5}
-    ]
-    
-    optimizer = AdamW(optimizer_parameters, weight_decay=0.01)
-    # TODO: Add LR scheduler(?) unsure if needed. Test empirically
-    # TODO: add dataset
-    
-    train_dataset = asl_citizen_dataset(
+    train_set = asl_citizen_dataset(
         csv_path=os.path.join(args.data_dir, "splits/train.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
@@ -64,9 +74,9 @@ if __name__=="__main__":
         ),
         num_labels=args.num_classes
     )
-    
-    test_dataset = asl_citizen_dataset(
-        csv_path=os.path.join(args.data_dir, "splits/test.csv"),
+
+    val_set = asl_citizen_dataset(
+        csv_path=os.path.join(args.data_dir, "splits/val.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
             VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"),
@@ -74,12 +84,20 @@ if __name__=="__main__":
         ),
         num_labels=args.num_classes
     )
-
-    trainer_classifier = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=test_dataset,
-        optimizers=(optimizer, None),   
+    
+    unfreeze_callback = LayerUnfreezeLightning(
+        delay_start=5,  # start unfreezing after 5 epochs
+        epoch_step=3,   # unfreeze 1 layer every 2 epochs
+        delay_unfreeze_all=15  # unfreeze all layers after 15 epochs
     )
-    # TODO: MLFlow Logging
+
+    lr_monitor = L.pytorch.callbacks.LearningRateMonitor(logging_interval="epoch")
+
+    callbacks = [unfreeze_callback, lr_monitor]
+
+    logger = MLFlowLogger(
+        experiment_name="videomae-asl-experiment"
+    )
+
+    
+    train(args, model, train_set, val_set, logger, callbacks=callbacks)

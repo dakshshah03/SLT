@@ -1,2 +1,2 @@
-from video_mae import VideoMAE_ssv2_Finetune
-from callbacks import LayerUnfreeze
+from video_mae import VideoMAE_ssv2_Finetune, VideoMAE_ssv2_FinetuneLightning
+from callbacks import LayerUnfreezeLightning
