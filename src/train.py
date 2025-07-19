@@ -3,15 +3,18 @@ from torch.optim import AdamW
 from transformers import TrainingArguments, Trainer
 from transformers import VideoMAEImageProcessor
 
-from model import VideoMAE_ssv2_Finetune, LayerUnfreeze
+from model import VideoMAE_ssv2_Finetune_Lightning, LayerUnfreeze
 from utils import asl_citizen_dataset, VideoMAE_Transform
 
 import os
 
-import mlflow
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import MLFlowLogger
 
 import argparse
 
+def train(args, model, train_set, test_set, optimizer):
+    train_loader = 
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
@@ -44,18 +47,10 @@ if __name__=="__main__":
         run_name="videomae-asl-run",
     )
 
-    model = VideoMAE_ssv2_Finetune(num_classes=args.num_classes)
+    model = VideoMAE_ssv2_Finetune_Lightning(num_classes=args.num_classes)
 
-    optimizer_parameters = [
-        {'params': model.classifier.parameters(), 'lr': 1e-4},
-        {'params': [p for p in model.videomae.parameters() if p.requires_grad], 'lr': 1e-5}
-    ]
     
-    optimizer = AdamW(optimizer_parameters, weight_decay=0.01)
-    # TODO: Add LR scheduler(?) unsure if needed. Test empirically
-    # TODO: add dataset
-    
-    train_dataset = asl_citizen_dataset(
+    train_set = asl_citizen_dataset(
         csv_path=os.path.join(args.data_dir, "splits/train.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
@@ -64,8 +59,8 @@ if __name__=="__main__":
         ),
         num_labels=args.num_classes
     )
-    
-    test_dataset = asl_citizen_dataset(
+
+    test_set = asl_citizen_dataset(
         csv_path=os.path.join(args.data_dir, "splits/test.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
@@ -75,11 +70,11 @@ if __name__=="__main__":
         num_labels=args.num_classes
     )
 
-    trainer_classifier = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=test_dataset,
-        optimizers=(optimizer, None),   
-    )
+    # trainer_classifier = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=train_set,
+    #     eval_dataset=test_set,
+    #     optimizers=(optimizer, None),   
+    # )
     # TODO: MLFlow Logging
