@@ -1,5 +1,8 @@
 # VideoMAE SLT (README in progress)
-This is an end-to-end ASL sign language translation model designed to be deployable and production-ready for inference
+This is an end-to-end ASL sign language translation model designed to be deployable and production-ready for inference.
+The model is a finetune of VideoMAE pretrained on ssv2 [original weights](https://huggingface.co/MCG-NJU/videomae-base-finetuned-ssv2) using the [ASL-Citizen](https://www.microsoft.com/en-us/research/project/asl-citizen/) dataset.
+
+The current state of the model is more for single word translation, generating a sequence of words that may or may not form a grammatically correct sentence (will update this after testing), but future goals include adding temporally-aware translation (possibly via large language models?). I'll be looking for more research that explore this field for better foundation models to use in gesture translation.
 
 Currently, the project is using:
 - Pytorch, Pytorch Lightning, Huggingface transformers
