@@ -3,7 +3,7 @@ from torch.optim import AdamW
 from transformers import TrainingArguments, Trainer
 from transformers import VideoMAEImageProcessor
 
-from model import VideoMAE_ssv2_FinetuneLightning, LayerUnfreezeLightning
+from model import VideoMAE_FinetuneLightning, LayerUnfreezeLightning
 from utils import asl_citizen_dataset, VideoMAE_Transform
 
 import os
@@ -40,7 +40,7 @@ def train(args, model, train_set, val_set, logger, callbacks):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
-        "Training script to finetune VideoMAE-ssv2 for ASL Sign Language Translation",
+        "Training script to finetune VideoMAE for ASL Sign Language Translation",
         add_help=False
     )
     
@@ -56,6 +56,9 @@ if __name__=="__main__":
 
     args = parser.parse_args()
     
+    # model_weights = "MCG-NJU/videomae-base-finetuned-ssv2"
+    model_weights = "OpenGVLab/VideoMAEv2-Base"
+    
     training_args = TrainingArguments(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.train_batch_size,
@@ -69,13 +72,13 @@ if __name__=="__main__":
         run_name="videomae-asl-run",
     )
 
-    model = VideoMAE_ssv2_FinetuneLightning(num_classes=args.num_classes)
+    model = VideoMAE_FinetuneLightning(num_classes=args.num_classes, model_weights=model_weights)
 
     train_set = asl_citizen_dataset(
         csv_path=os.path.join(args.data_dir, "splits/train.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
-            VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"),
+            VideoMAEImageProcessor.from_pretrained(model_weights),
             train=True
         ),
         num_labels=args.num_classes
@@ -85,7 +88,17 @@ if __name__=="__main__":
         csv_path=os.path.join(args.data_dir, "splits/val.csv"),
         data_dir=os.path.join(args.data_dir, "videos"),
         transform=VideoMAE_Transform(
-            VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"),
+            VideoMAEImageProcessor.from_pretrained(model_weights),
+            train=False
+        ),
+        num_labels=args.num_classes
+    )
+    
+    test_set = asl_citizen_dataset(
+        csv_path=os.path.join(args.data_dir, "splits/test.csv"),
+        data_dir=os.path.join(args.data_dir, "videos"),
+        transform=VideoMAE_Transform(
+            VideoMAEImageProcessor.from_pretrained(model_weights),
             train=False
         ),
         num_labels=args.num_classes
