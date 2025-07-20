@@ -1,26 +1,19 @@
 import torch
 from torch.optim import AdamW
 from transformers import TrainingArguments, Trainer
-from transformers import VideoMAEImageProcessor
-
-from model import VideoMAE_FinetuneLightning, LayerUnfreezeLightning
-from utils import asl_citizen_dataset, VideoMAE_Transform
-
-import os
-
 import lightning as L
 from lightning.loggers import MLFlowLogger
 
+from model import VideoMAE_FinetuneLightning, LayerUnfreezeLightning
+from utils import ASLCitizenDataModule
+import os
 import argparse
 
-def train(args, model, train_set, val_set, logger, callbacks):
+def train(args, model, logger, callbacks, datamodule):
     model = torch.compile(model)
 
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(os.path.join(args.output_dir, "checkpoints"), exist_ok=True)
-    
-    train_loader = L.DataLoader(train_set, batch_size=args.train_batch_size, shuffle=True)
-    val_loader = L.DataLoader(val_set, batch_size=args.eval_batch_size, shuffle=False)
         
     trainer = L.Trainer(
         strategy="ddp",
@@ -32,9 +25,11 @@ def train(args, model, train_set, val_set, logger, callbacks):
         enable_checkpointing=True,
         default_root_dir=args.output_dir
     )
-    
-    trainer.fit(model, train_loader, val_loader)
-    
+
+    trainer.fit(model, datamodule=datamodule)
+
+    trainer.test(model, datamodule=datamodule)
+
     final_model_save_path = os.path.join(args.output_dir, "latest_model.ckpt")
     trainer.save_checkpoint(final_model_save_path)
 
@@ -45,8 +40,9 @@ if __name__=="__main__":
     )
     
     # TODO: Add more arguments so parameters are less of a pain to set up
-    parser.add_argument('--train_batch_size', default=32, type=int)
-    parser.add_argument('--eval_batch_size', default=32, type=int)
+    parser.add_argument('--train_batch_size', default=16, type=int)
+    parser.add_argument('--val_batch_size', default=16, type=int)
+    parser.add_argument('--test_batch_size', default=16, type=int)
     parser.add_argument('--epochs', default=20, type=int)
     parser.add_argument('--output_dir', default="./model_artifacts", type=str)
     parser.add_argument('--report_to', default="mlflow", type=str)
@@ -59,51 +55,17 @@ if __name__=="__main__":
     # model_weights = "MCG-NJU/videomae-base-finetuned-ssv2"
     model_weights = "OpenGVLab/VideoMAEv2-Base"
     
-    training_args = TrainingArguments(
-        output_dir=args.output_dir,
-        per_device_train_batch_size=args.train_batch_size,
-        per_device_eval_batch_size=args.eval_batch_size,
-        num_train_epochs=args.epochs,
-        evaluation_strategy="epoch",
-        logging_strategy="steps",
-        logging_steps=50,
-        save_strategy="epoch",
-        report_to=args.report_to,
-        run_name="videomae-asl-run",
-    )
-
     model = VideoMAE_FinetuneLightning(num_classes=args.num_classes, model_weights=model_weights)
-
-    train_set = asl_citizen_dataset(
-        csv_path=os.path.join(args.data_dir, "splits/train.csv"),
-        data_dir=os.path.join(args.data_dir, "videos"),
-        transform=VideoMAE_Transform(
-            VideoMAEImageProcessor.from_pretrained(model_weights),
-            train=True
-        ),
-        num_labels=args.num_classes
-    )
-
-    val_set = asl_citizen_dataset(
-        csv_path=os.path.join(args.data_dir, "splits/val.csv"),
-        data_dir=os.path.join(args.data_dir, "videos"),
-        transform=VideoMAE_Transform(
-            VideoMAEImageProcessor.from_pretrained(model_weights),
-            train=False
-        ),
-        num_labels=args.num_classes
-    )
     
-    test_set = asl_citizen_dataset(
-        csv_path=os.path.join(args.data_dir, "splits/test.csv"),
-        data_dir=os.path.join(args.data_dir, "videos"),
-        transform=VideoMAE_Transform(
-            VideoMAEImageProcessor.from_pretrained(model_weights),
-            train=False
-        ),
-        num_labels=args.num_classes
-    )
     
+    dm = ASLCitizenDataModule(
+        data_dir=args.data_dir,
+        num_classes=args.num_classes,
+        train_batch=args.train_batch_size,
+        val_batch=args.val_batch_size,
+        test_batch=args.test_batch_size,
+    )
+
     unfreeze_callback = LayerUnfreezeLightning(
         delay_start=5,  # start unfreezing after 5 epochs
         epoch_step=3,   # unfreeze 1 layer every 2 epochs
@@ -131,4 +93,4 @@ if __name__=="__main__":
     )
 
     
-    train(args, model, train_set, val_set, logger, callbacks=callbacks)
+    train(args, model, logger, callbacks=callbacks)

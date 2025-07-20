@@ -5,10 +5,9 @@ import pandas as pd
 import os
 import numpy as np
 from transforms import VideoMAE_Transform
-from transformers import VideoMAEImageProcessor
+# from transformers import VideoMAEImageProcessor
 import json
 
-# TODO: Clean up code
 class asl_citizen_dataset(Dataset):
     def __init__(self, csv_path, video_dir, transform=None, num_labels=None):
         """
@@ -89,21 +88,21 @@ class asl_citizen_dataset(Dataset):
         
         return video_frames
 # testing 
-if __name__ == "__main__":
-    dataset = asl_citizen_dataset(
-        csv_path="data/splits/train.csv",
-        video_dir="data/ASL-Citizen/videos",
-        transform=VideoMAE_Transform(VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"), train=True),
-        num_labels=100
-    )
-    dataset.save_label_to_gloss(".")
-    video_path = ""
-    vid = asl_citizen_dataset.sample_frames(video_path)
+# if __name__ == "__main__":
+    # dataset = asl_citizen_dataset(
+    #     csv_path="data/splits/train.csv",
+    #     video_dir="data/ASL-Citizen/videos",
+    #     transform=VideoMAE_Transform(VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-ssv2"), train=True),
+    #     num_labels=100
+    # )
+    # dataset.save_label_to_gloss(".")
+    # video_path = ""
+    # vid = asl_citizen_dataset.sample_frames(video_path)
 
 
-    processor = VideoMAEImageProcessor.from_pretrained("OpenGVLab/VideoMAEv2-Base")
-    transform = VideoMAE_Transform(processor, train=True)
-    print(processor)
+    # processor = VideoMAEImageProcessor.from_pretrained("OpenGVLab/VideoMAEv2-Base")
+    # transform = VideoMAE_Transform(processor, train=True)
+    # print(processor)
     
-    x = transform(vid)
-    print(x.shape)
+    # x = transform(vid)
+    # print(x.shape)
