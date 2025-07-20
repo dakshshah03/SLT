@@ -7,7 +7,7 @@ from torchmetrics.functional.classification import accuracy
 # TODO: Modify model for lightning
 
 # torch native version
-class VideoMAE_ssv2_Finetune(nn.Module):
+class VideoMAE_Finetune(nn.Module):
     """
     VideoMAE model architecture with a 2 layer classifier
     head to support classification for 2700+ gesture classes.
@@ -16,11 +16,11 @@ class VideoMAE_ssv2_Finetune(nn.Module):
     Args:
         num_classes (int): Number of classes for output layer
     """
-    def __init__(self, num_classes=100):
-        super(VideoMAE_ssv2_Finetune, self).__init__()
+    def __init__(self, num_classes=100, model_weights="MCG-NJU/videomae-base-finetuned-ssv2"):
+        super(VideoMAE_Finetune, self).__init__()
         
         model = VideoMAEForVideoClassification.from_pretrained(
-            "MCG-NJU/videomae-base-finetuned-ssv2"
+            model_weights
         )
         hidden_size = model.config.hidden_size
         
@@ -53,7 +53,7 @@ class VideoMAE_ssv2_Finetune(nn.Module):
         return {"loss": loss, "logits": logits}
     
 
-class VideoMAE_ssv2_FinetuneLightning(L.LightningModule):
+class VideoMAE_FinetuneLightning(L.LightningModule):
     """
     VideoMAE model architecture with a 2 layer classifier
     head to support classification for 2700+ gesture classes.
@@ -62,11 +62,11 @@ class VideoMAE_ssv2_FinetuneLightning(L.LightningModule):
     Args:
         num_classes (int): Number of classes for output layer
     """
-    def __init__(self, num_classes=100):
-        super(VideoMAE_ssv2_FinetuneLightning, self).__init__()
+    def __init__(self, num_classes=100, model_weights="MCG-NJU/videomae-base-finetuned-ssv2"):
+        super(VideoMAE_FinetuneLightning, self).__init__()
         
         model = VideoMAEForVideoClassification.from_pretrained(
-            "MCG-NJU/videomae-base-finetuned-ssv2"
+            model_weights
         )
         self.hidden_size = model.config.hidden_size
         self.output_size = num_classes
@@ -129,5 +129,5 @@ class VideoMAE_ssv2_FinetuneLightning(L.LightningModule):
     
 
 if __name__ == "__main__":
-    x = VideoMAE_ssv2_FinetuneLightning()
+    x = VideoMAE_FinetuneLightning()
     print(x)
