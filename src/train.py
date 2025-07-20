@@ -14,7 +14,11 @@ from lightning.loggers import MLFlowLogger
 import argparse
 
 def train(args, model, train_set, val_set, logger, callbacks):
+    model = torch.compile(model)
 
+    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(os.path.join(args.output_dir, "checkpoints"), exist_ok=True)
+    
     train_loader = L.DataLoader(train_set, batch_size=args.train_batch_size, shuffle=True)
     val_loader = L.DataLoader(val_set, batch_size=args.eval_batch_size, shuffle=False)
         
@@ -31,6 +35,8 @@ def train(args, model, train_set, val_set, logger, callbacks):
     
     trainer.fit(model, train_loader, val_loader)
     
+    final_model_save_path = os.path.join(args.output_dir, "latest_model.ckpt")
+    trainer.save_checkpoint(final_model_save_path)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
@@ -90,13 +96,25 @@ if __name__=="__main__":
         epoch_step=3,   # unfreeze 1 layer every 2 epochs
         delay_unfreeze_all=15  # unfreeze all layers after 15 epochs
     )
+    
+    checkpoint_callback = L.pytorch.callbacks.ModelCheckpoint(
+        dirpath=os.path.join(args.output_dir, "checkpoints"),
+        filename="{epoch}-{val_loss:.4f}", 
+        monitor="val_loss",
+        mode="min",
+        save_top_k=1,
+        save_weights_only=False,
+        verbose=True
+    )
 
     lr_monitor = L.pytorch.callbacks.LearningRateMonitor(logging_interval="epoch")
 
-    callbacks = [unfreeze_callback, lr_monitor]
+    callbacks = [unfreeze_callback, lr_monitor, checkpoint_callback]
 
     logger = MLFlowLogger(
-        experiment_name="videomae-asl-experiment"
+        experiment_name="ASL-videomae",
+        log_model=True,
+        run_name="videomae-asl-run",
     )
 
     
